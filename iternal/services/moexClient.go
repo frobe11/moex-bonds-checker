@@ -1,7 +1,7 @@
 package services
 
 import (
-	"github.com/frobe11/bonds-checker/models"	
+	. "github.com/frobe11/moex-bonds-checker/iternal/models/bond"	
 
 )
 
