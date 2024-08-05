@@ -3,7 +3,6 @@ package services
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	. "github.com/frobe11/moex-bonds-checker/iternal/models"
@@ -16,36 +15,23 @@ const (
 func Getbonds() ([]Bond, error) {
 	url := fmt.Sprintf("%s%s", baseUrl,
 		"engines/stock/markets/bonds/securities.json?iss.only=securities,marketdata&lang=en&iss.meta=off&iss.json=extended")
+	fmt.Print(url)
 	res := make([]Bond, 0)
 	resp, err := http.Get(url)
 	if err != nil {
 		return res, err
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return res, err
-	}
-
-	defer resp.Body.Close()
-
 	b := new(bondInfo)
-
-	err = json.Unmarshal(body, &b)
+	fmt.Print(*resp)
+	err = getJson(*resp, &b)
 	if err != nil {
 		return res, err
 	}
-	for i, s := range b.Securities {
-		res = append(res,
-			*New(s.Shortname,
-				s.Couponpercent,
-				s.Couponvalue,
-				b.Marketdata[i].Last,
-				s.Facevalue,
-				s.Accruedint,
-				s.Nextcoupon))
-	}
-	return res, nil;
+	fmt.Print(b)
+	parseBonds(*b, res);
+	fmt.Print(res);	
+	return res, nil
 }
 
 type bondInfo struct {
@@ -64,7 +50,7 @@ type bondInfo struct {
 		Accruedint            float64     `json:"ACCRUEDINT"`
 		Prevprice             float64     `json:"PREVPRICE"`
 		Lotsize               int         `json:"LOTSIZE"`
-		Facevalue             float64         `json:"FACEVALUE"`
+		Facevalue             float64     `json:"FACEVALUE"`
 		Boardname             string      `json:"BOARDNAME"`
 		Status                string      `json:"STATUS"`
 		Matdate               string      `json:"MATDATE"`
@@ -157,4 +143,22 @@ type bondInfo struct {
 		Yieldlastcoupon       interface{} `json:"YIELDLASTCOUPON"`
 		Tradingsession        interface{} `json:"TRADINGSESSION"`
 	} `json:"marketdata,omitempty"`
+}
+
+func getJson(r http.Response, target interface{}) error {
+	defer r.Body.Close()
+	return json.NewDecoder(r.Body).Decode(target)
+}
+
+func parseBonds(bInfo bondInfo, bTarget []Bond) {
+	for i, s := range bInfo.Securities {
+		bTarget = append(bTarget,
+			*New(s.Shortname,
+				s.Couponpercent,
+				s.Couponvalue,
+				bInfo.Marketdata[i].Last,
+				s.Facevalue,
+				s.Accruedint,
+				s.Nextcoupon))
+	}
 }
